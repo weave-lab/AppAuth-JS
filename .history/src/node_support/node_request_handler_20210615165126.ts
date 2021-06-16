@@ -88,7 +88,7 @@ export class NodeBasedHandler extends AuthorizationRequestHandler {
         error: authorizationError
       } as AuthorizationRequestResponse;
       emitter.emit(ServerEventsEmitter.ON_AUTHORIZATION_RESPONSE, completeResponse);
-      response.end();
+      response.end('Close your browser to continue');
     };
 
     this.authorizationPromise = new Promise<AuthorizationRequestResponse>((resolve, reject) => {
