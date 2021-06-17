@@ -46,7 +46,7 @@ export class App {
   private tokenHandler: TokenRequestHandler;
 
   // state
-  configuration: AuthorizationServiceConfiguration | undefined;
+  configuration: AuthorizationServiceConfiguration|undefined;
 
   constructor() {
     this.notifier = new AuthorizationNotifier();
@@ -60,18 +60,18 @@ export class App {
       log('Authorization request complete ', request, response, error);
       if (response) {
         this.makeRefreshTokenRequest(this.configuration!, request, response)
-          .then(result => this.makeAccessTokenRequest(this.configuration!, result.refreshToken!))
-          .then(() => log('All done.'));
+            .then(result => this.makeAccessTokenRequest(this.configuration!, result.refreshToken!))
+            .then(() => log('All done.'));
       }
     });
   }
 
   fetchServiceConfiguration(): Promise<AuthorizationServiceConfiguration> {
     return AuthorizationServiceConfiguration.fetchFromIssuer(openIdConnectUrl, requestor)
-      .then(response => {
-        log('Fetched service configuration', response);
-        return response;
-      });
+        .then(response => {
+          log('Fetched service configuration', response);
+          return response;
+        });
   }
 
   makeAuthorizationRequest(configuration: AuthorizationServiceConfiguration) {
@@ -82,7 +82,7 @@ export class App {
       scope: scope,
       response_type: AuthorizationRequest.RESPONSE_TYPE_CODE,
       state: undefined,
-      extras: { 'prompt': 'consent', 'access_type': 'offline' }
+      extras: {'prompt': 'consent', 'access_type': 'offline'}
     }, new NodeCrypto());
 
     log('Making authorization request ', configuration, request);
@@ -90,11 +90,11 @@ export class App {
   }
 
   makeRefreshTokenRequest(
-    configuration: AuthorizationServiceConfiguration,
-    request: AuthorizationRequest,
-    response: AuthorizationResponse) {
-
-    let extras: StringMap | undefined = undefined;
+      configuration: AuthorizationServiceConfiguration,
+      request: AuthorizationRequest,
+      response: AuthorizationResponse) {
+    
+    let extras: StringMap|undefined = undefined;
     if (request && request.internal) {
       extras = {};
       extras['code_verifier'] = request.internal['code_verifier'];
@@ -132,7 +132,7 @@ export class App {
   }
 
   makeRevokeTokenRequest(configuration: AuthorizationServiceConfiguration, refreshToken: string) {
-    let request = new RevokeTokenRequest({ token: refreshToken });
+    let request = new RevokeTokenRequest({token: refreshToken});
 
     return this.tokenHandler.performRevokeTokenRequest(configuration, request).then(response => {
       log('revoked refreshToken');
@@ -145,11 +145,11 @@ log('Application is ready.');
 const app = new App();
 
 app.fetchServiceConfiguration()
-  .then(configuration => {
-    app.configuration = configuration;
-    app.makeAuthorizationRequest(configuration);
-    // notifier makes token requests.
-  })
-  .catch(error => {
-    log('Something bad happened ', error);
-  });
+    .then(configuration => {
+      app.configuration = configuration;
+      app.makeAuthorizationRequest(configuration);
+      // notifier makes token requests.
+    })
+    .catch(error => {
+      log('Something bad happened ', error);
+    });

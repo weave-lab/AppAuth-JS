@@ -27,18 +27,25 @@ import { GRANT_TYPE_AUTHORIZATION_CODE, GRANT_TYPE_REFRESH_TOKEN, TokenRequest }
 import { BaseTokenRequestHandler, TokenRequestHandler } from '../token_request_handler';
 import { StringMap } from '../types';
 
-const PORT = 32111;
+const PORT = 8000;
 
 /* the Node.js based HTTP client. */
 const requestor = new NodeRequestor();
 
+// /* an example open id connect provider */
+// const openIdConnectUrl = 'https://accounts.google.com';
+
+// /* example client configuration */
+// const clientId = '511828570984-7nmej36h9j2tebiqmpqh835naet4vci4.apps.googleusercontent.com';
+// const redirectUri = `http://127.0.0.1:${PORT}`;
+// const scope = 'openid';
 /* an example open id connect provider */
-const openIdConnectUrl = 'https://accounts.google.com';
+const openIdConnectUrl = 'https://weave-admin.okta.com/oauth2/default';
 
 /* example client configuration */
-const clientId = '511828570984-7nmej36h9j2tebiqmpqh835naet4vci4.apps.googleusercontent.com';
-const redirectUri = `http://127.0.0.1:${PORT}`;
-const scope = 'openid';
+const clientId = '0oaaakd7tnWWb3cJD4h6';
+const redirectUri = 'http://localhost:8000';
+const scope = 'openid profile offline_access email';
 
 export class App {
   private notifier: AuthorizationNotifier;
