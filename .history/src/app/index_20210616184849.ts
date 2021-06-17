@@ -14,14 +14,14 @@
 
 // Represents the test web app that uses the AppAuthJS library.
 
-import { AuthorizationRequest } from '../authorization_request';
-import { AuthorizationNotifier, AuthorizationRequestHandler } from '../authorization_request_handler';
-import { AuthorizationServiceConfiguration } from '../authorization_service_configuration';
-import { log } from '../logger';
-import { RedirectRequestHandler } from '../redirect_based_handler';
-import { GRANT_TYPE_AUTHORIZATION_CODE, GRANT_TYPE_REFRESH_TOKEN, TokenRequest } from '../token_request';
-import { BaseTokenRequestHandler, TokenRequestHandler } from '../token_request_handler';
-import { TokenResponse } from '../token_response';
+import {AuthorizationRequest} from '../authorization_request';
+import {AuthorizationNotifier, AuthorizationRequestHandler} from '../authorization_request_handler';
+import {AuthorizationServiceConfiguration} from '../authorization_service_configuration';
+import {log} from '../logger';
+import {RedirectRequestHandler} from '../redirect_based_handler';
+import {GRANT_TYPE_AUTHORIZATION_CODE, GRANT_TYPE_REFRESH_TOKEN, TokenRequest} from '../token_request';
+import {BaseTokenRequestHandler, TokenRequestHandler} from '../token_request_handler';
+import {TokenResponse} from '../token_response';
 import { AuthorizationResponse } from '../authorization_response';
 import { StringMap } from '../types';
 
@@ -59,11 +59,11 @@ export class App {
   private tokenHandler: TokenRequestHandler;
 
   // state
-  private configuration: AuthorizationServiceConfiguration | undefined;
-  private request: AuthorizationRequest | undefined;
-  private response: AuthorizationResponse | undefined;
-  private code: string | undefined;
-  private tokenResponse: TokenResponse | undefined;
+  private configuration: AuthorizationServiceConfiguration|undefined;
+  private request: AuthorizationRequest|undefined;
+  private response: AuthorizationResponse|undefined;
+  private code: string|undefined;
+  private tokenResponse: TokenResponse|undefined;
 
   constructor(public snackbar: Element) {
     this.notifier = new AuthorizationNotifier();
@@ -85,20 +85,20 @@ export class App {
 
   showMessage(message: string) {
     const snackbar = (this.snackbar as any)['MaterialSnackbar'] as MaterialSnackBar;
-    snackbar.showSnackbar({ message: message });
+    snackbar.showSnackbar({message: message});
   }
 
   fetchServiceConfiguration() {
     AuthorizationServiceConfiguration.fetchFromIssuer(openIdConnectUrl)
-      .then(response => {
-        log('Fetched service configuration', response);
-        this.configuration = response;
-        this.showMessage('Completed fetching configuration');
-      })
-      .catch(error => {
-        log('Something bad happened', error);
-        this.showMessage(`Something bad happened ${error}`)
-      });
+        .then(response => {
+          log('Fetched service configuration', response);
+          this.configuration = response;
+          this.showMessage('Completed fetching configuration');
+        })
+        .catch(error => {
+          log('Something bad happened', error);
+          this.showMessage(`Something bad happened ${error}`)
+        });
   }
 
   makeAuthorizationRequest() {
@@ -109,14 +109,14 @@ export class App {
       scope: scope,
       response_type: AuthorizationRequest.RESPONSE_TYPE_CODE,
       state: undefined,
-      extras: { 'prompt': 'consent', 'access_type': 'offline' }
+      extras: {'prompt': 'consent', 'access_type': 'offline'}
     });
 
     if (this.configuration) {
       this.authorizationHandler.performAuthorizationRequest(this.configuration, request);
     } else {
       this.showMessage(
-        'Fetch Authorization Service configuration, before you make the authorization request.');
+          'Fetch Authorization Service configuration, before you make the authorization request.');
     }
   }
 
@@ -126,9 +126,9 @@ export class App {
       return;
     }
 
-    let request: TokenRequest | null = null;
+    let request: TokenRequest|null = null;
     if (this.code) {
-      let extras: StringMap | undefined = undefined;
+      let extras: StringMap|undefined = undefined;
       if (this.request && this.request.internal) {
         extras = {};
         extras['code_verifier'] = this.request.internal['code_verifier'];
@@ -156,32 +156,32 @@ export class App {
 
     if (request) {
       this.tokenHandler.performTokenRequest(this.configuration, request)
-        .then(response => {
-          let isFirstRequest = false;
-          if (this.tokenResponse) {
-            // copy over new fields
-            this.tokenResponse.accessToken = response.accessToken;
-            this.tokenResponse.issuedAt = response.issuedAt;
-            this.tokenResponse.expiresIn = response.expiresIn;
-            this.tokenResponse.tokenType = response.tokenType;
-            this.tokenResponse.scope = response.scope;
-          } else {
-            isFirstRequest = true;
-            this.tokenResponse = response;
-          }
+          .then(response => {
+            let isFirstRequest = false;
+            if (this.tokenResponse) {
+              // copy over new fields
+              this.tokenResponse.accessToken = response.accessToken;
+              this.tokenResponse.issuedAt = response.issuedAt;
+              this.tokenResponse.expiresIn = response.expiresIn;
+              this.tokenResponse.tokenType = response.tokenType;
+              this.tokenResponse.scope = response.scope;
+            } else {
+              isFirstRequest = true;
+              this.tokenResponse = response;
+            }
 
-          // unset code, so we can do refresh token exchanges subsequently
-          this.code = undefined;
-          if (isFirstRequest) {
-            this.showMessage(`Obtained a refresh token ${response.refreshToken}`);
-          } else {
-            this.showMessage(`Obtained an access token ${response.accessToken}.`);
-          }
-        })
-        .catch(error => {
-          log('Something bad happened', error);
-          this.showMessage(`Something bad happened ${error}`)
-        });
+            // unset code, so we can do refresh token exchanges subsequently
+            this.code = undefined;
+            if (isFirstRequest) {
+              this.showMessage(`Obtained a refresh token ${response.refreshToken}`);
+            } else {
+              this.showMessage(`Obtained an access token ${response.accessToken}.`);
+            }
+          })
+          .catch(error => {
+            log('Something bad happened', error);
+            this.showMessage(`Something bad happened ${error}`)
+          });
     }
   }
 

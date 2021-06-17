@@ -21,7 +21,7 @@ import { AuthorizationServiceConfiguration } from '../authorization_service_conf
 import { log } from '../logger';
 import { NodeCrypto } from '../node_support';
 import { NodeRequestor } from '../node_support/node_requestor';
-import { NodeBasedHandlerAuthorization } from '../node_support/node_request_handler_authorization';
+import { NodeBasedHandler } from '../node_support/node_request_handler';
 import { RevokeTokenRequest } from '../revoke_token_request';
 import { GRANT_TYPE_AUTHORIZATION_CODE, GRANT_TYPE_REFRESH_TOKEN, TokenRequest } from '../token_request';
 import { BaseTokenRequestHandler, TokenRequestHandler } from '../token_request_handler';
@@ -33,13 +33,18 @@ const PORT = 32111;
 const requestor = new NodeRequestor();
 
 /* an example open id connect provider */
-const openIdConnectUrl = 'https://accounts.google.com';
+// const openIdConnectUrl = 'https://accounts.google.com';
+
+// /* example client configuration */
+// const clientId = '511828570984-7nmej36h9j2tebiqmpqh835naet4vci4.apps.googleusercontent.com';
+// const redirectUri = `http://127.0.0.1:${PORT}`;
+// const scope = 'openid';
+const openIdConnectUrl = 'https://weave-admin.okta.com/oauth2/default';
 
 /* example client configuration */
-const clientId = '511828570984-7nmej36h9j2tebiqmpqh835naet4vci4.apps.googleusercontent.com';
-const redirectUri = `http://127.0.0.1:${PORT}`;
-const scope = 'openid';
-
+const clientId = '0oaaakd7tnWWb3cJD4h6';
+const redirectUri = 'http://localhost:8000';
+const scope = 'openid profile offline_access email';
 export class App {
   private notifier: AuthorizationNotifier;
   private authorizationHandler: AuthorizationRequestHandler;
@@ -50,7 +55,7 @@ export class App {
 
   constructor() {
     this.notifier = new AuthorizationNotifier();
-    this.authorizationHandler = new NodeBasedHandlerAuthorization(PORT);
+    this.authorizationHandler = new NodeBasedHandler(PORT);
     this.tokenHandler = new BaseTokenRequestHandler(requestor);
     // set notifier to deliver responses
     this.authorizationHandler.setAuthorizationNotifier(this.notifier);
