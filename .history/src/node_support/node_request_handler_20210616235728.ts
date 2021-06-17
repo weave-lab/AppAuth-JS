@@ -24,7 +24,6 @@ import {log} from '../logger';
 import {BasicQueryStringUtils, QueryStringUtils} from '../query_string_utils';
 import {NodeCrypto} from './crypto_utils';
 
-
 // TypeScript typings for `opener` are not correct and do not export it as module
 import opener = require('opener');
 
@@ -59,7 +58,6 @@ export class NodeBasedHandler extends AuthorizationRequestHandler {
 
       const url = Url.parse(httpRequest.url);
       const searchParams = new Url.URLSearchParams(url.query || '');
-
       const state = searchParams.get('state') || undefined;
       const code = searchParams.get('code');
       const error = searchParams.get('error');
@@ -107,7 +105,7 @@ export class NodeBasedHandler extends AuthorizationRequestHandler {
       response.write("</head>");
       response.write(body,'base64');
       response.end("</html>");
-    };
+  };
 
     this.authorizationPromise = new Promise<AuthorizationRequestResponse>((resolve, reject) => {
       emitter.once(ServerEventsEmitter.ON_UNABLE_TO_START, () => {
