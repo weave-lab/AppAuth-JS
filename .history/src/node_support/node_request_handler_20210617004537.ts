@@ -90,7 +90,7 @@ export class NodeBasedHandler extends AuthorizationRequestHandler {
 
       emitter.emit(ServerEventsEmitter.ON_AUTHORIZATION_RESPONSE, completeResponse);
       
-      response.end(`
+      res.end(`
       <!DOCTYPE html>
       <html>
           <head>
