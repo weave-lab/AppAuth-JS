@@ -15,22 +15,37 @@
 import { EventEmitter } from 'events';
 import * as Http from 'http';
 import * as Url from 'url';
+import { Crypto } from '../crypto_utils';
 import { log } from '../logger';
+import { BasicQueryStringUtils, QueryStringUtils } from '../query_string_utils';
+import { NodeCrypto } from './crypto_utils';
+import { EndSessionRequest } from '../end_session_request';
+
 class ServerEventsEmitter extends EventEmitter {
     static ON_UNABLE_TO_START = 'unable_to_start';
+    static ON_END_SESSION_RESPONSE = 'end_session_response';
 }
-export class NodeBasedHandlerEndSession {
-    constructor(
-        // default to port 8500
-        public httpServerPort = 8500,
-    ) { }
 
-    performEndSessionRequest() {
+export class NodeBasedHandlerEndSession {
+
+    constructor(
+        // default to port 8000
+        public httpServerPort = 8000,
+        utils: QueryStringUtils = new BasicQueryStringUtils(),
+        crypto: Crypto = new NodeCrypto()) {
+    }
+
+
+    performEndSessionRequest(
+        request: EndSessionRequest) {
+        // use opener to launch a web browser and start the session end flow.
+        // start a web server to handle the session end response.
         const emitter = new ServerEventsEmitter();
 
         const requestHandler = (httpRequest: Http.IncomingMessage, response: Http.ServerResponse) => {
-            if (!httpRequest.url) return;
-
+            if (!httpRequest.url) {
+                return;
+            }
             const url = Url.parse(httpRequest.url);
             const searchParams = new Url.URLSearchParams(url.query || '');
             const error = searchParams.get('error');
@@ -44,10 +59,14 @@ export class NodeBasedHandlerEndSession {
         };
 
         let server: Http.Server;
-        server = Http.createServer(requestHandler);
-        server.listen(this.httpServerPort).on('error', function (err) {
-            log('Something bad happened ', err);
-            emitter.emit(ServerEventsEmitter.ON_UNABLE_TO_START);
-        });
+        request.setupCodeVerifier()
+            .then(() => {
+                server = Http.createServer(requestHandler);
+                server.listen(this.httpServerPort);
+            })
+            .catch((error) => {
+                log('Something bad happened ', error);
+                emitter.emit(ServerEventsEmitter.ON_UNABLE_TO_START);
+            });
     }
 }

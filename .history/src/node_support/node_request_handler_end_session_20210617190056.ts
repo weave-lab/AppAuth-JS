@@ -21,8 +21,8 @@ class ServerEventsEmitter extends EventEmitter {
 }
 export class NodeBasedHandlerEndSession {
     constructor(
-        // default to port 8500
-        public httpServerPort = 8500,
+        // default to port 8000
+        public httpServerPort = 8000,
     ) { }
 
     performEndSessionRequest() {

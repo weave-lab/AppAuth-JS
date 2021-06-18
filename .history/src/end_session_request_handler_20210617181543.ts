@@ -12,13 +12,13 @@
  * limitations under the License.
  */
 
-import {Crypto} from './crypto_utils';
-import {EndSessionRequest} from './end_session_request';
-import {EndSessionError, EndSessionResponse} from './end_session_response';
-import {EndSessionServiceConfiguration} from './end_session_service_configuration';
-import {log} from './logger';
-import {QueryStringUtils} from './query_string_utils';
-import {StringMap} from './types';
+import { Crypto } from './crypto_utils';
+import { EndSessionRequest } from './end_session_request';
+import { EndSessionError, EndSessionResponse } from './end_session_response';
+import { EndSessionServiceConfiguration } from './end_session_service_configuration';
+import { log } from './logger';
+import { QueryStringUtils } from './query_string_utils';
+import { StringMap } from './types';
 
 
 /**
@@ -26,16 +26,16 @@ import {StringMap} from './types';
  * and an EndSessionResponse as arguments.
  */
 export type EndSessionListener =
-    (request: EndSessionRequest, response: EndSessionResponse|null, error: EndSessionError|null) =>
-        void;
+  (request: EndSessionRequest, response: EndSessionResponse | null, error: EndSessionError | null) =>
+    void;
 
 /**
  * Represents a structural type holding both EndSession request and response.
  */
 export interface EndSessionRequestResponse {
   request: EndSessionRequest;
-  response: EndSessionResponse|null;
-  error: EndSessionError|null;
+  response: EndSessionResponse | null;
+  error: EndSessionError | null;
 }
 
 /**
@@ -43,7 +43,7 @@ export interface EndSessionRequestResponse {
  * This manages the communication of the EndSessionResponse to the 3p client.
  */
 export class EndSessionNotifier {
-  private listener: EndSessionListener|null = null;
+  private listener: EndSessionListener | null = null;
 
   setEndSessionListener(listener: EndSessionListener) {
     this.listener = listener;
@@ -53,9 +53,9 @@ export class EndSessionNotifier {
    * The EndSession complete callback.
    */
   onEndSessionComplete(
-      request: EndSessionRequest,
-      response: EndSessionResponse|null,
-      error: EndSessionError|null): void {
+    request: EndSessionRequest,
+    response: EndSessionResponse | null,
+    error: EndSessionError | null): void {
     if (this.listener) {
       // complete EndSession request
       this.listener(request, response, error);
@@ -72,17 +72,17 @@ export const BUILT_IN_PARAMETERS = ['redirect_uri', 'client_id', 'response_type'
  * using various methods (iframe / popup / different process etc.).
  */
 export abstract class EndSessionRequestHandler {
-  constructor(public utils: QueryStringUtils, protected crypto: Crypto) {}
+  constructor(public utils: QueryStringUtils, protected crypto: Crypto) { }
 
   // notifier send the response back to the client.
-  protected notifier: EndSessionNotifier|null = null;
+  protected notifier: EndSessionNotifier | null = null;
 
   /**
    * A utility method to be able to build the EndSession request URL.
    */
   protected buildRequestUrl(
-      configuration: EndSessionServiceConfiguration,
-      request: EndSessionRequest) {
+    configuration: EndSessionServiceConfiguration,
+    request: EndSessionRequest) {
     // build the query string
     // coerce to any type for convenience
 
@@ -131,13 +131,13 @@ export abstract class EndSessionRequestHandler {
    * Makes an EndSession request.
    */
   abstract performEndSessionRequest(
-      configuration: EndSessionServiceConfiguration,
-      request: EndSessionRequest): void;
+    configuration: EndSessionServiceConfiguration,
+    request: EndSessionRequest): void;
 
   /**
    * Checks if an EndSession flow can be completed, and completes it.
    * The handler returns a `Promise<EndSessionRequestResponse>` if ready, or a `Promise<null>`
    * if not ready.
    */
-  protected abstract completeEndSessionRequest(): Promise<EndSessionRequestResponse|null>;
+  protected abstract completeEndSessionRequest(): Promise<EndSessionRequestResponse | null>;
 }

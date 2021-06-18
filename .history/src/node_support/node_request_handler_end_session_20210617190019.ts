@@ -16,21 +16,24 @@ import { EventEmitter } from 'events';
 import * as Http from 'http';
 import * as Url from 'url';
 import { log } from '../logger';
+
 class ServerEventsEmitter extends EventEmitter {
     static ON_UNABLE_TO_START = 'unable_to_start';
 }
+
 export class NodeBasedHandlerEndSession {
     constructor(
-        // default to port 8500
-        public httpServerPort = 8500,
+        // default to port 8000
+        public httpServerPort = 8000,
     ) { }
 
     performEndSessionRequest() {
         const emitter = new ServerEventsEmitter();
 
         const requestHandler = (httpRequest: Http.IncomingMessage, response: Http.ServerResponse) => {
-            if (!httpRequest.url) return;
-
+            if (!httpRequest.url) {
+                return;
+            }
             const url = Url.parse(httpRequest.url);
             const searchParams = new Url.URLSearchParams(url.query || '');
             const error = searchParams.get('error');

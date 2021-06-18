@@ -15,25 +15,72 @@
 import { EventEmitter } from 'events';
 import * as Http from 'http';
 import * as Url from 'url';
+import { Crypto } from '../crypto_utils';
 import { log } from '../logger';
+import { BasicQueryStringUtils, QueryStringUtils } from '../query_string_utils';
+import { NodeCrypto } from './crypto_utils';
+import { EndSessionServiceConfiguration } from '../end_session_service_configuration';
+import { EndSessionRequest } from '../end_session_request';
+import { EndSessionError, EndSessionResponse } from '../end_session_response';
+import { EndSessionRequestHandler, EndSessionRequestResponse } from '../end_session_request_handler';
+
+
+// TypeScript typings for `opener` are not correct and do not export it as module
+import opener = require('opener');
+
 class ServerEventsEmitter extends EventEmitter {
     static ON_UNABLE_TO_START = 'unable_to_start';
+    static ON_END_SESSION_RESPONSE = 'end_session_response';
 }
-export class NodeBasedHandlerEndSession {
-    constructor(
-        // default to port 8500
-        public httpServerPort = 8500,
-    ) { }
 
-    performEndSessionRequest() {
+export class NodeBasedHandlerEndSession extends EndSessionRequestHandler {
+    // the handle to the current authorization request
+    endSessionPromise: Promise<EndSessionRequestResponse | null> | null = null;
+
+    constructor(
+        // default to port 8000
+        public httpServerPort = 8000,
+        utils: QueryStringUtils = new BasicQueryStringUtils(),
+        crypto: Crypto = new NodeCrypto()) {
+        super(utils, crypto);
+    }
+
+
+    performEndSessionRequest(
+        configuration: EndSessionServiceConfiguration,
+        request: EndSessionRequest) {
+        // use opener to launch a web browser and start the session end flow.
+        // start a web server to handle the session end response.
         const emitter = new ServerEventsEmitter();
 
         const requestHandler = (httpRequest: Http.IncomingMessage, response: Http.ServerResponse) => {
-            if (!httpRequest.url) return;
+            if (!httpRequest.url) {
+                return;
+            }
 
             const url = Url.parse(httpRequest.url);
             const searchParams = new Url.URLSearchParams(url.query || '');
+
+            const state = searchParams.get('state') || undefined;
+            const code = searchParams.get('code');
             const error = searchParams.get('error');
+
+            let endSessionResponse: EndSessionResponse | null = null;
+            let endSessionError: EndSessionError | null = null;
+            if (error) {
+                log('error');
+                // const errorUri = searchParams.get('error_uri') || undefined;
+                // const errorDescription = searchParams.get('error_description') || undefined;
+                // endSessionError = new EndSessionError(
+                //     { error: error, error_description: errorDescription, error_uri: errorUri, state: state });
+            }
+            // const completeResponse = {
+            //     request,
+            //     response: endSessionResponse,
+            //     error: endSessionError
+            //   } as EndSessionRequestResponse;
+            // emitter.emit(ServerEventsEmitter.ON_END_SESSION_RESPONSE, completeResponse);
+
             if (error) {
                 response.end(`<!DOCTYPE html><html><head> <title>Weave Unsuccessful logout</title> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <link rel="shortcut icon" type="image/svg+xml" href="data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cdefs%3E%3Cstyle%3E.cls-1{fill:%234bc7e8;}%3C/style%3E%3C/defs%3E%3Cg id='Layer_2' data-name='Layer 2'%3E%3Cg id='Layer_1-2' data-name='Layer 1'%3E%3Cpath class='cls-1' d='M114,0h27c1.8,1.92,4.33,1.39,6.5,1.73A127.89,127.89,0,0,1,253.25,102.6c.85,4.14.51,8.56,2.75,12.4v27c-1.87,1.6-1.48,3.94-1.79,6-8,52.13-48.68,94.77-100.31,105.19-4.31.87-8.87.69-12.9,2.84H114c-1.6-1.88-3.94-1.49-6-1.8-52.12-8-94.78-48.72-105.2-100.35-.8-4-.4-8.26-2.83-11.85V115c1.88-1.82,1.4-4.34,1.74-6.52A127.75,127.75,0,0,1,108.54,1.74C110.39,1.45,112.61,1.88,114,0Zm29.59,100.2c1.18-.56,1.65-.73,2.06-1,17-10.51,35-1.34,36.17,18.58.39,6.81.22,13.66,0,20.48-.23,7.34-2.89,13.71-8.93,18.2-7,5.17-14.67,6.34-22.61,2.55-8.66-4.15-12.7-11.48-12.92-20.91-.19-8,.21-16-.26-24-1.2-20.46-19-37.4-39.52-38S58.39,91.48,56.14,111.93a143.84,143.84,0,0,0-.06,31.93c3.28,29.23,36.49,45.5,61.63,30.21,1.66-1,4.56-1.72,2.85-4.73-2.59-4.58-5.38-9-8.2-13.73l-3.13,1.9c-15.06,9.08-32.67.72-34.73-16.76a104.82,104.82,0,0,1,.29-27.41,20.56,20.56,0,0,1,8.68-14.08c6.9-5,14.42-6,22.19-2.37,8.51,4,12.66,11.14,13,20.34.32,7.82-.09,15.67.22,23.49.82,20.39,17.18,37.06,38,39,18.57,1.75,37.71-11.88,41.89-30.87a94.39,94.39,0,0,0-.09-42.17c-6.28-26.42-37.42-38.88-60.52-24.77-1.89,1.16-4.52,2-2.48,5.25C138.4,91.38,140.88,95.69,143.59,100.2Z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"/> <style> body { background-color: #f9fbfe; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25'%3E%3Cdefs%3E%3ClinearGradient id='a' gradientUnits='userSpaceOnUse' x1='0' x2='0' y1='0' y2='100%25' gradientTransform='rotate(240)'%3E%3Cstop offset='0' stop-color='%23f9fbfe'/%3E%3Cstop offset='1' stop-color='%23ff6b59'/%3E%3C/linearGradient%3E%3Cpattern patternUnits='userSpaceOnUse' id='b' width='540' height='450' x='0' y='0' viewBox='0 0 1080 900'%3E%3Cg fill-opacity='0.1'%3E%3Cpolygon fill='%23444' points='90 150 0 300 180 300'/%3E%3Cpolygon points='90 150 180 0 0 0'/%3E%3Cpolygon fill='%23AAA' points='270 150 360 0 180 0'/%3E%3Cpolygon fill='%23DDD' points='450 150 360 300 540 300'/%3E%3Cpolygon fill='%23999' points='450 150 540 0 360 0'/%3E%3Cpolygon points='630 150 540 300 720 300'/%3E%3Cpolygon fill='%23DDD' points='630 150 720 0 540 0'/%3E%3Cpolygon fill='%23444' points='810 150 720 300 900 300'/%3E%3Cpolygon fill='%23FFF' points='810 150 900 0 720 0'/%3E%3Cpolygon fill='%23DDD' points='990 150 900 300 1080 300'/%3E%3Cpolygon fill='%23444' points='990 150 1080 0 900 0'/%3E%3Cpolygon fill='%23DDD' points='90 450 0 600 180 600'/%3E%3Cpolygon points='90 450 180 300 0 300'/%3E%3Cpolygon fill='%23666' points='270 450 180 600 360 600'/%3E%3Cpolygon fill='%23AAA' points='270 450 360 300 180 300'/%3E%3Cpolygon fill='%23DDD' points='450 450 360 600 540 600'/%3E%3Cpolygon fill='%23999' points='450 450 540 300 360 300'/%3E%3Cpolygon fill='%23999' points='630 450 540 600 720 600'/%3E%3Cpolygon fill='%23FFF' points='630 450 720 300 540 300'/%3E%3Cpolygon points='810 450 720 600 900 600'/%3E%3Cpolygon fill='%23DDD' points='810 450 900 300 720 300'/%3E%3Cpolygon fill='%23AAA' points='990 450 900 600 1080 600'/%3E%3Cpolygon fill='%23444' points='990 450 1080 300 900 300'/%3E%3Cpolygon fill='%23222' points='90 750 0 900 180 900'/%3E%3Cpolygon points='270 750 180 900 360 900'/%3E%3Cpolygon fill='%23DDD' points='270 750 360 600 180 600'/%3E%3Cpolygon points='450 750 540 600 360 600'/%3E%3Cpolygon points='630 750 540 900 720 900'/%3E%3Cpolygon fill='%23444' points='630 750 720 600 540 600'/%3E%3Cpolygon fill='%23AAA' points='810 750 720 900 900 900'/%3E%3Cpolygon fill='%23666' points='810 750 900 600 720 600'/%3E%3Cpolygon fill='%23999' points='990 750 900 900 1080 900'/%3E%3Cpolygon fill='%23999' points='180 0 90 150 270 150'/%3E%3Cpolygon fill='%23444' points='360 0 270 150 450 150'/%3E%3Cpolygon fill='%23FFF' points='540 0 450 150 630 150'/%3E%3Cpolygon points='900 0 810 150 990 150'/%3E%3Cpolygon fill='%23222' points='0 300 -90 450 90 450'/%3E%3Cpolygon fill='%23FFF' points='0 300 90 150 -90 150'/%3E%3Cpolygon fill='%23FFF' points='180 300 90 450 270 450'/%3E%3Cpolygon fill='%23666' points='180 300 270 150 90 150'/%3E%3Cpolygon fill='%23222' points='360 300 270 450 450 450'/%3E%3Cpolygon fill='%23FFF' points='360 300 450 150 270 150'/%3E%3Cpolygon fill='%23444' points='540 300 450 450 630 450'/%3E%3Cpolygon fill='%23222' points='540 300 630 150 450 150'/%3E%3Cpolygon fill='%23AAA' points='720 300 630 450 810 450'/%3E%3Cpolygon fill='%23666' points='720 300 810 150 630 150'/%3E%3Cpolygon fill='%23FFF' points='900 300 810 450 990 450'/%3E%3Cpolygon fill='%23999' points='900 300 990 150 810 150'/%3E%3Cpolygon points='0 600 -90 750 90 750'/%3E%3Cpolygon fill='%23666' points='0 600 90 450 -90 450'/%3E%3Cpolygon fill='%23AAA' points='180 600 90 750 270 750'/%3E%3Cpolygon fill='%23444' points='180 600 270 450 90 450'/%3E%3Cpolygon fill='%23444' points='360 600 270 750 450 750'/%3E%3Cpolygon fill='%23999' points='360 600 450 450 270 450'/%3E%3Cpolygon fill='%23666' points='540 600 630 450 450 450'/%3E%3Cpolygon fill='%23222' points='720 600 630 750 810 750'/%3E%3Cpolygon fill='%23FFF' points='900 600 810 750 990 750'/%3E%3Cpolygon fill='%23222' points='900 600 990 450 810 450'/%3E%3Cpolygon fill='%23DDD' points='0 900 90 750 -90 750'/%3E%3Cpolygon fill='%23444' points='180 900 270 750 90 750'/%3E%3Cpolygon fill='%23FFF' points='360 900 450 750 270 750'/%3E%3Cpolygon fill='%23AAA' points='540 900 630 750 450 750'/%3E%3Cpolygon fill='%23FFF' points='720 900 810 750 630 750'/%3E%3Cpolygon fill='%23222' points='900 900 990 750 810 750'/%3E%3Cpolygon fill='%23222' points='1080 300 990 450 1170 450'/%3E%3Cpolygon fill='%23FFF' points='1080 300 1170 150 990 150'/%3E%3Cpolygon points='1080 600 990 750 1170 750'/%3E%3Cpolygon fill='%23666' points='1080 600 1170 450 990 450'/%3E%3Cpolygon fill='%23DDD' points='1080 900 1170 750 990 750'/%3E%3C/g%3E%3C/pattern%3E%3C/defs%3E%3Crect x='0' y='0' fill='url(%23a)' width='100%25' height='100%25'/%3E%3Crect x='0' y='0' fill='url(%23b)' width='100%25' height='100%25'/%3E%3C/svg%3E"); background-attachment: fixed; background-size: cover; background-attachment: fixed; background-size: cover; font-family: "Proxima Nova", sans-serif; } .fail-card { width: 400px; height: 250px; background-color: white; position: absolute; display: flex; flex-direction: column; padding: 24px; left: 0; right: 0; top: 0; bottom: 0; margin: auto; max-width: 100%; max-height: 100%; overflow: auto; box-shadow: 0 4px 10px 0 rgba(49, 53, 61, 0.24); border-radius: 5%; } .fail-card-header { display: flex; justify-content: flex-start; align-items: center; width: 100%; } .fail-card-body h2 { font-family: "Proxima Nova", sans-serif; font-weight: 400; } </style></head><body> <div class="fail-card"> <div class="fail-card-header"> <svg width="190px" height="51px" viewBox="0 0 170 31" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"> <title>Weave-Logo</title> <g id="WC-Form---Multi-Office" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd"> <g id="Welcome-to-Weave-page-Copy-3" transform="translate(-48.000000, -28.000000)" fill="#29343C"> <g id="Weave-Logo" transform="translate(48.000000, 28.000000)"> <path d="M19.1940667,12.2762144 L19.1940667,18.543468 C19.1727682,25.2882197 24.6156774,30.8174551 31.4561187,31 C37.913358,30.9944221 43.2981032,26.1309761 43.8665019,19.7910706 C43.9653894,18.8602421 44,16.4673793 44,15.526804 C44,14.5862286 43.9653894,12.1933658 43.8665019,11.2625373 C43.4948374,6.83143707 40.7158695,2.94694178 36.606148,1.1138737 C32.4964264,-0.719194381 27.7015862,-0.212861221 24.07911,2.43672379 C23.970277,2.54880251 23.9598127,2.7220807 24.0543881,2.84609338 L26.6600742,7.10548656 C26.7021404,7.16605331 26.7687826,7.20566771 26.8427596,7.21408107 C26.9167366,7.22249443 26.9907806,7.19888018 27.0457355,7.14934759 L27.0457355,7.14934759 C28.944966,5.56918826 31.5645072,5.12916561 33.8875338,6.0000829 C36.2105605,6.87100018 37.8712482,8.91570755 38.2249691,11.3405125 C38.3665166,12.729737 38.4259495,14.1259016 38.4029666,15.5219305 C38.4246698,16.9047421 38.3685474,18.2876759 38.2348578,19.6643609 C37.7591096,22.9941499 34.8677038,25.4699079 31.4561187,25.468637 L31.4561187,25.468637 C29.679714,25.437506 27.9892001,24.7096121 26.7589617,23.4461563 C25.5108532,22.1846381 24.8148956,20.4907023 24.8207664,18.728659 L24.8207664,12.4614054 C24.8445622,5.70922813 19.3920755,0.174791116 12.5438813,0 C6.07794961,0.00668938926 0.68984191,4.88375171 0.133498146,11.2332967 C0.0296662546,12.1836189 0,14.5569879 0,15.5024367 C0,16.4478856 0.0296662546,18.8310014 0.133498146,19.7667033 C0.510485079,24.1927191 3.28821068,28.0710143 7.39330246,29.9029329 C11.4983942,31.7348514 16.2878804,31.2334638 19.9110012,28.5925169 C20.0167838,28.4772377 20.0270639,28.3049822 19.9357231,28.1782739 L17.3300371,23.9188807 C17.2879708,23.8583139 17.2213287,23.8186995 17.1473517,23.8102862 C17.0733747,23.8018728 16.9993307,23.8254871 16.9443758,23.8750197 L16.9443758,23.8750197 C15.0458858,25.4576592 12.42543,25.8998274 10.100943,25.0297608 C7.77645609,24.1596942 6.11431787,22.1145305 5.76019778,19.6887282 C5.62277556,18.2992393 5.56499936,16.9032149 5.58714462,15.5073102 C5.56543098,14.1228763 5.62155325,12.73832 5.7552534,11.3600063 C6.21686626,8.01602682 9.11009459,5.51998804 12.5339926,5.5118692 L12.5339926,5.5118692 C14.3103972,5.54300021 16.0009112,6.2708941 17.2311496,7.53434994 C18.4782048,8.79852387 19.1738692,10.493495 19.1693449,12.2567206 L19.1940667,12.2762144 Z" id="Path"></path> <polygon id="Path" points="73.5063996 26 77.9438338 26 85 5 80.4283993 5 75.6480952 19.6853147 70.6441801 5 66.360789 5 61.3022135 19.6853147 56.5765698 5 52 5 59.0611354 26 63.478693 26 68.5024846 11.4425897"></polygon> <polygon id="Path" points="136.408046 26 141.591954 26 150 5 145.496905 5 139.024315 21.0591022 132.507958 5 128 5"></polygon> <path d="M107.079059,17.809859 C107.499059,22.9620556 112.153647,27 117.336941,27 C119.516491,27.0015441 121.644902,26.3412071 123.439294,25.1067499 L123.671529,24.9391186 L124.476941,26.4182182 L128,26.4182182 C127.755722,25.2071504 127.628316,23.9755119 127.619529,22.7401907 L127.619529,14.0085733 C127.619529,8.49153216 122.861176,4 117.332,4 C112.148706,4 107.494118,8.03794165 107.074118,13.1901383 L107.074118,13.1901383 C107,13.9346183 107,14.7678444 107,15.3792055 L107,15.6207918 C107,16.2321529 107,17.065379 107.074118,17.809859 L107.079059,17.809859 Z M117.336941,23.0557319 C114.322824,23.0557319 111.531059,20.871595 111.071529,17.9331173 L111.071529,17.9331173 L111.036941,17.6471581 C110.973758,16.958802 110.947368,16.2675763 110.957882,15.5764188 L110.957882,15.4038572 C110.947368,14.7126997 110.973758,14.021474 111.036941,13.3331179 L111.071529,13.0471586 L111.071529,13.0471586 C111.531059,10.0889596 114.322824,7.92454402 117.336941,7.92454402 C120.351059,7.92454402 123.093412,10.1284023 123.552941,13.0570193 L123.552941,13.0570193 L123.582588,13.3429785 C123.645771,14.0313346 123.672162,14.7225604 123.661647,15.4137178 L123.661647,15.5862794 C123.672162,16.2774369 123.645771,16.9686626 123.582588,17.6570188 L123.552941,17.942978 L123.552941,17.942978 C123.093412,20.871595 120.321412,23.0557319 117.336941,23.0557319 Z" id="Shape" fill-rule="nonzero"></path> <path d="M105,14.2748124 C105,8.68874598 100.421335,4 95,4 C89.4793785,4.00543576 85.0053703,8.5340144 85,14.1219721 L85,16.8780279 C85,22.459164 89.6566001,27 95.2873843,27 C99.0197604,26.9978842 102.480373,25.024042 104.41549,21.7935691 L100.966878,19.9989282 C99.6994674,21.9181632 97.5680733,23.0690185 95.2873843,23.0655949 C92.3560278,23.0086698 89.8137326,20.9998454 89.047735,18.1352626 C89.0378734,18.048446 89.0378734,17.9607715 89.047735,17.873955 L104.922065,17.8197213 L105,14.2748124 Z M88.8918656,14.1022508 L88.8918656,13.6092176 C89.145058,10.4149822 91.7657354,7.94494086 94.9314977,7.91674235 C98.09726,7.88854385 100.760477,10.3115198 101.069167,13.5007503 L101.069167,14.0677385 L88.8918656,14.1022508 Z" id="Shape" fill-rule="nonzero"></path> <path d="M170,14.2748124 C170,8.68874598 165.420219,4 159.997564,4 C154.4775,4.00815216 150.005366,8.5359366 150,14.1219721 L150,16.8780279 C150,22.459164 154.652862,27 160.28989,27 C164.02144,26.9961624 167.48066,25.0225417 169.415347,21.7935691 L165.965895,19.9989282 C164.707197,21.9156123 162.583525,23.0669561 160.309379,23.0655949 C157.376161,23.0119442 154.831533,21.0017663 154.06821,18.1352626 C154.05595,18.0486018 154.05595,17.9606158 154.06821,17.873955 L169.951279,17.8197213 L170,14.2748124 Z M153.892814,14.1022508 L153.892814,13.6092176 C154.146068,10.4149822 156.767384,7.94494086 159.933917,7.91674235 C163.100451,7.88854385 165.764316,10.3115198 166.073082,13.5007503 L166.073082,14.0677385 L153.892814,14.1022508 Z" id="Shape" fill-rule="nonzero"></path> </g> </g> </g> </svg> </div> <div class="fail-card-body"> <h2>Okta Logout was Unsuccessful </h2> <p>You may close the browser now.</p> </div></div></body></html>`);
                 server.close();
@@ -43,11 +90,39 @@ export class NodeBasedHandlerEndSession {
             }
         };
 
-        let server: Http.Server;
-        server = Http.createServer(requestHandler);
-        server.listen(this.httpServerPort).on('error', function (err) {
-            log('Something bad happened ', err);
-            emitter.emit(ServerEventsEmitter.ON_UNABLE_TO_START);
+        this.endSessionPromise = new Promise<EndSessionRequestResponse>((resolve, reject) => {
+            emitter.once(ServerEventsEmitter.ON_UNABLE_TO_START, () => {
+                reject(`Unable to create HTTP server at port ${this.httpServerPort}`);
+            });
+            emitter.once(ServerEventsEmitter.ON_END_SESSION_RESPONSE, (result: any) => {
+                console.log("test");
+                server.close();
+                // resolve pending promise
+                resolve(result as EndSessionRequestResponse);
+                // complete end session flow
+                this.completeEndSessionRequestIfPossible();
+            });
         });
+
+        let server: Http.Server;
+        request.setupCodeVerifier()
+            .then(() => {
+                server = Http.createServer(requestHandler);
+                console.log("object");
+                server.listen(this.httpServerPort);
+            })
+            .catch((error) => {
+                log('Something bad happened ', error);
+                emitter.emit(ServerEventsEmitter.ON_UNABLE_TO_START);
+            });
+    }
+
+    protected completeEndSessionRequest(): Promise<EndSessionRequestResponse | null> {
+        if (!this.endSessionPromise) {
+            return Promise.reject(
+                'No pending end session request. Call performEndSessionRequest() ?');
+        }
+
+        return this.endSessionPromise;
     }
 }
