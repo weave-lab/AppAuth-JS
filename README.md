@@ -1,6 +1,12 @@
-### Weave Info:
+## Weave Info:
   1. This is a Forked project specifically for Okta authentication on the Desktop-Client Application.
-  2. **This needs to be re-based every year!** from [AppAuth-JS](https://github.com/openid/AppAuth-JS)
+  2. The package has been renamed to `@weave/openid-appauth` so we can host on our private repos.
+  3. **This needs to be re-based every year!** from [AppAuth-JS](https://github.com/openid/AppAuth-JS)
+### Weave Publish
+1. Make sure all packages are installed with `npm i`
+2. Make sure you do a version bump, either patch, minor or major ex: `npm version patch`. This will bump the package.json and commit the change.
+3. Then `npm publish`
+4. Note: You will need to have your NPM auth stuff set up prior. IE: if you can pull down `@weave/design-system` you should be good.
 
 ![AppAuth for JS](assets/logo.png)
 
